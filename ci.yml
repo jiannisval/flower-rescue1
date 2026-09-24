@@ -1,0 +1,35 @@
+name: CI
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test-core:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Swift version
+        run: swift --version
+      - name: Test core engine
+        run: swift test
+
+  build-app:
+    runs-on: macos-15
+    needs: test-core
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install XcodeGen
+        run: brew install xcodegen
+      - name: Generate Xcode project
+        run: xcodegen generate
+      - name: Build for iOS Simulator (unsigned)
+        run: |
+          xcodebuild -project FlowerRescue.xcodeproj -scheme FlowerRescue \
+            -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath build CODE_SIGNING_ALLOWED=NO build
+      - name: Upload simulator build
+        uses: actions/upload-artifact@v4
+        with:
+          name: FlowerRescue-simulator-app
+          path: build/Build/Products/Debug-iphonesimulator/FlowerRescue.app
